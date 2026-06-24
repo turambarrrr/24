@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>行人重识别系统 · 完整版</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: auto;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(12px);
+            border-radius: 32px;
+            padding: 25px 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        }
+        h1 { font-size: 2.2rem; color: #1a2639; display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+        h1 i { color: #2a7de1; }
+        .subtitle { color: #4a5b6e; margin-bottom: 25px; border-left: 4px solid #2a7de1; padding-left: 16px; background: rgba(42,125,225,0.06); border-radius: 0 8px 8px 0; line-height: 1.6; }
+        .flex-row { display: flex; flex-wrap: wrap; gap: 20px; }
+        .flex-col { flex: 1; min-width: 300px; }
+        .box { background: #fff; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid #eef2f6; }
+        .box h3 { font-size: 1.1rem; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+        .box h3 i { color: #2a7de1; }
+        .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; }
+        .file-input-wrapper input[type="file"] { position: absolute; left:0; top:0; opacity:0; width:100%; height:100%; cursor:pointer; }
+        .file-input-wrapper .fake-btn { display: inline-flex; align-items: center; gap:8px; background:#f0f4f9; padding:10px 22px; border-radius:40px; font-weight:500; border:1px solid #dce3ec; transition:0.2s; cursor:pointer; }
+        .file-input-wrapper .fake-btn:hover { background:#e5ebf3; border-color:#b0c4db; }
+        .preview-box { margin-top: 10px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+        .preview-box img { max-height: 200px; max-width: 200px; border-radius: 16px; border:2px solid #fff; background:#f8fafc; object-fit:contain; }
+        .preview-box .file-name { color:#2a4a6e; background:#eef4fa; padding:4px 16px; border-radius:40px; font-size:0.9rem; }
+        .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 15px 25px; margin: 10px 0; }
+        .controls label { display: flex; align-items: center; gap: 6px; font-weight:500; cursor:pointer; }
+        .controls label input[type="checkbox"] { width:18px; height:18px; accent-color:#2a7de1; }
+        .btn-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px; }
+        .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 24px; border-radius: 40px; font-weight:600; border:none; background:#eef2f6; color:#1a2639; cursor:pointer; transition:0.2s; }
+        .btn-primary { background:#2a7de1; color:#fff; box-shadow:0 4px 12px rgba(42,125,225,0.3); }
+        .btn-primary:hover { background:#1a5fb0; transform:translateY(-1px); }
+        .btn-success { background:#0f9d58; color:#fff; box-shadow:0 4px 12px rgba(15,157,88,0.3); }
+        .btn-success:hover { background:#0b7a45; transform:translateY(-1px); }
+        .btn-danger { background:#d93025; color:#fff; }
+        .btn-danger:hover { background:#b3261e; }
+        .btn-outline { background:transparent; border:1.5px solid #bcc9db; }
+        .btn-outline:hover { background:#f0f4fa; }
+        .camera-container { position:relative; width:100%; max-width:500px; }
+        .camera-container video { width:100%; border-radius:16px; border:2px solid #dce3ec; background:#000; }
+        .query-display { position:relative; display:inline-block; }
+        .query-display img { max-width:100%; border-radius:16px; border:2px solid #dce3ec; }
+        .query-display canvas { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
+        .result-area { margin-top: 10px; }
+        .batch-image-group { background:#f0f7ff; border-radius:16px; padding:16px 20px; margin-bottom:20px; border-left:5px solid #2a7de1; }
+        .batch-image-group h4 { font-size:1.1rem; color:#1a2b3e; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+        .person-group { background:#f8fafd; border-radius:12px; padding:12px 16px; margin:12px 0; border-left:4px solid #ff6b35; }
+        .person-group h5 { font-size:1rem; color:#1a2b3e; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+        .result-table { width:100%; border-collapse:collapse; font-size:0.9rem; }
+        .result-table th { text-align:left; padding:6px 6px 4px 0; font-weight:600; color:#3a4e66; border-bottom:1px solid #dce3ec; }
+        .result-table td { padding:6px 6px 6px 0; border-bottom:1px solid #e9edf2; }
+        .result-table tr:last-child td { border-bottom:none; }
+        .result-table .score { font-weight:600; color:#0f7b3a; }
+        .result-table .rank-badge { display:inline-block; background:#eef2f6; border-radius:40px; padding:0 12px; font-weight:600; font-size:0.8rem; color:#1a2b3e; }
+        .result-table .preview-img { max-width:50px; max-height:50px; border-radius:6px; cursor:pointer; border:1px solid #dce3ec; transition:0.15s; }
+        .result-table .preview-img:hover { transform:scale(1.5); }
+        .no-results { color:#6a7f98; text-align:center; padding:30px 0; font-style:italic; }
+        .batch-progress { color:#2a7de1; font-weight:500; }
+        @media (max-width:700px) {
+            .container { padding:15px; }
+            .flex-row { flex-direction:column; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1><i class="fas fa-people-arrows"></i> 行人重识别系统 · 完整版</h1>
+    <div class="subtitle">
+        <i class="fas fa-database"></i> PRW 数据集 · YOLOv8 多目标检测 · 自动过滤同帧 · 支持摄像头 & 批量
+    </div>
+
+    <div class="flex-row">
+        <!-- 左栏 -->
+        <div class="flex-col">
+            <!-- 单图上传 -->
+            <div class="box">
+                <h3><i class="fas fa-upload"></i> 单图查询</h3>
+                <div class="file-input-wrapper">
+                    <span class="fake-btn"><i class="fas fa-folder-open"></i> 选择图片</span>
+                    <input type="file" id="queryFile" accept="image/*">
+                </div>
+                <div class="preview-box" id="previewBox">
+                    <div class="query-display" id="queryDisplay">
+                        <img id="previewImg" src="" alt="预览" style="display:none;">
+                        <canvas id="boxCanvas"></canvas>
+                    </div>
+                    <span class="file-name" id="fileName">未选择文件</span>
+                </div>
+                <div style="margin-top:10px;">
+                    <label><input type="checkbox" id="useYolo" checked> 启用 YOLO 检测多人</label>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="searchSingle()"><i class="fas fa-search"></i> 检索</button>
+                    <button class="btn btn-success" onclick="exportCurrent()"><i class="fas fa-file-excel"></i> 导出 Excel</button>
+                    <button class="btn btn-outline" onclick="clearAll()"><i class="fas fa-undo-alt"></i> 清空</button>
+                </div>
+            </div>
+
+            <!-- 摄像头 -->
+            <div class="box">
+                <h3><i class="fas fa-video"></i> 实时摄像头</h3>
+                <div class="camera-container">
+                    <video id="video" autoplay playsinline></video>
+                </div>
+                <div style="margin-top:10px;">
+                    <button class="btn btn-primary" onclick="startCamera()"><i class="fas fa-play"></i> 开启</button>
+                    <button class="btn btn-danger" onclick="stopCamera()"><i class="fas fa-stop"></i> 关闭</button>
+                    <button class="btn btn-success" onclick="captureAndSearch()"><i class="fas fa-camera"></i> 抓拍检索</button>
+                </div>
+            </div>
+
+            <!-- 批量上传 -->
+            <div class="box">
+                <h3><i class="fas fa-layer-group"></i> 批量检索</h3>
+                <div class="file-input-wrapper">
+                    <span class="fake-btn"><i class="fas fa-files"></i> 选择多张图片</span>
+                    <input type="file" id="batchFile" accept="image/*" multiple>
+                </div>
+                <div id="batchFileList" style="margin:10px 0; font-size:0.9rem; color:#4a5b6e;"></div>
+                <button class="btn btn-primary" onclick="searchBatch()"><i class="fas fa-search"></i> 开始批量检索</button>
+                <span id="batchProgress" class="batch-progress" style="margin-left:12px;"></span>
+            </div>
+        </div>
+
+        <!-- 右栏：结果展示 -->
+        <div class="flex-col">
+            <div class="box">
+                <h3><i class="fas fa-list-ul"></i> 检索结果 <span style="font-size:0.8rem; font-weight:400; color:#6a7f98; margin-left:12px;">（已自动过滤同帧）</span></h3>
+                <div style="margin-bottom:10px;">
+                    <label>图库路径：</label>
+                    <input type="text" id="galleryPath" value="gallery" style="width:200px; padding:6px 12px; border-radius:20px; border:1px solid #dce3ec;">
+                </div>
+                <div class="result-area" id="resultArea">
+                    <div class="no-results"><i class="fas fa-image"></i> 请上传图片或使用摄像头抓拍</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentResults = [];   // 存储当前显示的所有结果（用于导出）
+let stream = null;
+let canvas = document.getElementById('boxCanvas');
+let ctx = canvas.getContext('2d');
+
+// ---------- 文件预览 ----------
+document.getElementById('queryFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            const img = document.getElementById('previewImg');
+            img.src = ev.target.result;
+            img.style.display = 'block';
+            document.getElementById('fileName').textContent = file.name;
+            canvas.width = 0;
+            canvas.height = 0;
+        };
+        reader.readAsDataURL(file);
+    } else {
+        document.getElementById('previewImg').style.display = 'none';
+        document.getElementById('fileName').textContent = '未选择文件';
+        canvas.width = 0;
+        canvas.height = 0;
+    }
+});
+
+document.getElementById('batchFile').addEventListener('change', function(e) {
+    const files = e.target.files;
+    let names = [];
+    for (let f of files) names.push(f.name);
+    document.getElementById('batchFileList').innerHTML = names.length ? '已选 ' + names.length + ' 个文件：' + names.join(', ') : '';
+});
+
+// ---------- 绘制检测框（带编号） ----------
+function drawBoxes(boxes) {
+    const img = document.getElementById('previewImg');
+    if (!img || !img.src) return;
+    canvas.width = img.naturalWidth || img.width;
+    canvas.height = img.naturalHeight || img.height;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!boxes || boxes.length === 0) return;
+    ctx.strokeStyle = '#ff0000';
+    ctx.lineWidth = 3;
+    ctx.font = 'bold 20px Arial';
+    ctx.fillStyle = 'red';
+    boxes.forEach(box => {
+        // box 格式: [x1, y1, x2, y2, person_id]
+        const [x1, y1, x2, y2, pid] = box;
+        ctx.strokeRect(x1, y1, x2-x1, y2-y1);
+        ctx.fillText(`行人${pid}`, x1, y1 - 8);
+    });
+}
+
+// ---------- 单图检索 ----------
+function searchSingle() {
+    const fileInput = document.getElementById('queryFile');
+    const file = fileInput.files[0];
+    if (!file) { alert('请先选择一张图片'); return; }
+
+    const formData = new FormData();
+    formData.append('query_img', file);
+    formData.append('use_yolo', document.getElementById('useYolo').checked ? 'true' : 'false');
+    formData.append('gallery_path', document.getElementById('galleryPath').value.trim());
+
+    const area = document.getElementById('resultArea');
+    area.innerHTML = '<div class="no-results"><i class="fas fa-spinner fa-spin"></i> 检索中...</div>';
+
+    fetch('/search', { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) { alert('错误: ' + data.error); area.innerHTML = '<div class="no-results">检索失败</div>'; return; }
+            currentResults = data.results || [];
+            drawBoxes(data.boxes);
+            displayResults(data.results);
+        })
+        .catch(err => {
+            alert('请求失败: ' + err);
+            area.innerHTML = '<div class="no-results">网络错误</div>';
+        });
+}
+
+// ---------- 摄像头 ----------
+function startCamera() {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(s => {
+                stream = s;
+                document.getElementById('video').srcObject = s;
+            })
+            .catch(err => alert('无法访问摄像头: ' + err));
+    } else {
+        alert('浏览器不支持摄像头');
+    }
+}
+
+function stopCamera() {
+    if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+        document.getElementById('video').srcObject = null;
+    }
+}
+
+function captureAndSearch() {
+    const video = document.getElementById('video');
+    if (!video.srcObject) { alert('请先开启摄像头'); return; }
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    const dataUrl = canvas.toDataURL('image/jpeg');
+
+    const area = document.getElementById('resultArea');
+    area.innerHTML = '<div class="no-results"><i class="fas fa-spinner fa-spin"></i> 检索中...</div>';
+
+    fetch('/camera_search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            image: dataUrl,
+            use_yolo: document.getElementById('useYolo').checked,
+            gallery_path: document.getElementById('galleryPath').value.trim()
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) { alert('错误: ' + data.error); area.innerHTML = '<div class="no-results">检索失败</div>'; return; }
+        currentResults = data.results || [];
+        // 摄像头抓拍时，预览图是视频截图，我们无法直接叠加 canvas，但我们可以把检测框信息存储，这里简化
+        // 注意：摄像头抓拍不会显示检测框，如需显示可将截图放到预览区域
+        // 但为了功能统一，此处我们仍然尝试绘制（若预览图已有 src）
+        drawBoxes(data.boxes);
+        displayResults(data.results);
+    })
+    .catch(err => {
+        alert('请求失败: ' + err);
+        area.innerHTML = '<div class="no-results">网络错误</div>';
+    });
+}
+
+// ---------- 批量检索 ----------
+function searchBatch() {
+    const fileInput = document.getElementById('batchFile');
+    const files = fileInput.files;
+    if (files.length === 0) { alert('请选择至少一张图片'); return; }
+
+    const formData = new FormData();
+    for (let f of files) {
+        formData.append('query_imgs', f);
+    }
+    formData.append('use_yolo', document.getElementById('useYolo').checked ? 'true' : 'false');
+    formData.append('gallery_path', document.getElementById('galleryPath').value.trim());
+
+    const area = document.getElementById('resultArea');
+    area.innerHTML = '<div class="no-results"><i class="fas fa-spinner fa-spin"></i> 批量检索中，请稍候...</div>';
+    document.getElementById('batchProgress').textContent = '处理中...';
+
+    fetch('/batch_search', { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('batchProgress').textContent = '';
+            if (data.error) { alert('错误: ' + data.error); area.innerHTML = '<div class="no-results">批量检索失败</div>'; return; }
+            // 将批量结果转换为与单图相同的扁平结构，便于导出
+            const flatResults = [];
+            data.batch_results.forEach(img => {
+                img.persons.forEach(p => {
+                    p.results.forEach(r => {
+                        flatResults.push({
+                            query_img: img.filename,
+                            person_id: p.person_id,
+                            rank: r.rank,
+                            name: r.name,
+                            path: r.path,
+                            score: r.score
+                        });
+                    });
+                });
+            });
+            currentResults = flatResults;
+            displayBatchResults(data.batch_results);
+        })
+        .catch(err => {
+            document.getElementById('batchProgress').textContent = '';
+            alert('批量检索失败: ' + err);
+            area.innerHTML = '<div class="no-results">网络错误</div>';
+        });
+}
+
+// ---------- 展示函数 ----------
+function displayBatchResults(batchResults) {
+    const area = document.getElementById('resultArea');
+    area.innerHTML = '';
+    if (!batchResults || batchResults.length === 0) {
+        area.innerHTML = '<div class="no-results">无结果</div>';
+        return;
+    }
+
+    batchResults.forEach(imgData => {
+        const imgGroup = document.createElement('div');
+        imgGroup.className = 'batch-image-group';
+        imgGroup.innerHTML = `<h4><i class="fas fa-file-image"></i> ${imgData.filename}</h4>`;
+
+        imgData.persons.forEach(p => {
+            const personDiv = document.createElement('div');
+            personDiv.className = 'person-group';
+            const title = p.person_id === 0 ? '整图检索' : `行人 ${p.person_id}`;
+            personDiv.innerHTML = `<h5><i class="fas fa-user"></i> ${title}</h5>`;
+            const table = document.createElement('table');
+            table.className = 'result-table';
+            table.innerHTML = `<thead><tr><th>排名</th><th>匹配图片</th><th>预览</th><th style="text-align:right;">相似度</th></tr></thead><tbody></tbody>`;
+            const tbody = table.querySelector('tbody');
+            p.results.forEach(r => {
+                const tr = document.createElement('tr');
+                const rankBadge = `<span class="rank-badge">#${r.rank}</span>`;
+                const score = (r.score * 100).toFixed(2) + '%';
+                const imgSrc = `/image?path=${encodeURIComponent(r.path)}`;
+                tr.innerHTML = `
+                    <td>${rankBadge}</td>
+                    <td>${r.name}</td>
+                    <td><img src="${imgSrc}" class="preview-img" onclick="window.open('${imgSrc}','_blank')"></td>
+                    <td style="text-align:right; font-weight:600; color:#0f7b3a;">${score}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            personDiv.appendChild(table);
+            imgGroup.appendChild(personDiv);
+        });
+        area.appendChild(imgGroup);
+    });
+}
+
+// 单图或摄像头结果展示（兼容旧格式）
+function displayResults(results) {
+    if (!results || results.length === 0) {
+        document.getElementById('resultArea').innerHTML = '<div class="no-results">未找到匹配结果</div>';
+        return;
+    }
+    // 按 person_id 分组展示
+    const groups = {};
+    results.forEach(item => {
+        const pid = item.person_id || 0;
+        if (!groups[pid]) groups[pid] = [];
+        groups[pid].push(item);
+    });
+    const area = document.getElementById('resultArea');
+    area.innerHTML = '';
+    for (const [pid, items] of Object.entries(groups)) {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'person-group';
+        const title = pid === '0' ? '整图检索' : `行人 ${pid}`;
+        groupDiv.innerHTML = `<h5><i class="fas fa-user"></i> ${title}</h5>`;
+        const table = document.createElement('table');
+        table.className = 'result-table';
+        table.innerHTML = `<thead><tr><th>排名</th><th>匹配图片</th><th>预览</th><th style="text-align:right;">相似度</th></tr></thead><tbody></tbody>`;
+        const tbody = table.querySelector('tbody');
+        items.sort((a,b) => a.rank - b.rank).forEach(item => {
+            const tr = document.createElement('tr');
+            const rankBadge = `<span class="rank-badge">#${item.rank}</span>`;
+            const score = (item.score * 100).toFixed(2) + '%';
+            const imgSrc = `/image?path=${encodeURIComponent(item.path)}`;
+            tr.innerHTML = `
+                <td>${rankBadge}</td>
+                <td>${item.name}</td>
+                <td><img src="${imgSrc}" class="preview-img" onclick="window.open('${imgSrc}','_blank')"></td>
+                <td style="text-align:right; font-weight:600; color:#0f7b3a;">${score}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        groupDiv.appendChild(table);
+        area.appendChild(groupDiv);
+    }
+}
+
+// ---------- 导出当前结果 ----------
+function exportCurrent() {
+    if (!currentResults || currentResults.length === 0) {
+        alert('没有结果可导出，请先进行检索。');
+        return;
+    }
+    fetch('/export_current', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ results: currentResults })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw new Error(err.error || '导出失败'); });
+        }
+        return response.blob();
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '检索结果.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    })
+    .catch(err => {
+        alert('导出失败: ' + err.message);
+    });
+}
+
+// ---------- 清空 ----------
+function clearAll() {
+    document.getElementById('resultArea').innerHTML = '<div class="no-results">请上传图片或使用摄像头抓拍</div>';
+    currentResults = [];
+    document.getElementById('previewImg').style.display = 'none';
+    document.getElementById('fileName').textContent = '未选择文件';
+    document.getElementById('queryFile').value = '';
+    document.getElementById('batchFile').value = '';
+    document.getElementById('batchFileList').innerHTML = '';
+    canvas.width = 0;
+    canvas.height = 0;
+    stopCamera();
+    document.getElementById('batchProgress').textContent = '';
+}
+</script>
+</body>
+</html>
